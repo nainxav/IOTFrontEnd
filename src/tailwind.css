@@ -1,0 +1,21 @@
+:root {
+  --color-primary: var(--color-violet);
+  --color-primary-50: var(--color-violet-50);
+  --color-primary-100: var(--color-violet-100);
+  --color-primary-light: var(--color-violet-light);
+  --color-primary-lighter: var(--color-violet-lighter);
+  --color-primary-dark: var(--color-violet-dark);
+  --color-primary-darker: var(--color-violet-darker);
+  /*  */
+  --color-violet: #495057;
+  --color-violet-50: #dee2e6;
+  --color-violet-100: #ced4da;
+  --color-violet-light: #6c757d;
+  --color-violet-lighter: #adb5bd;
+  --color-violet-dark: #343a40;
+  --color-violet-darker: #212529;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
