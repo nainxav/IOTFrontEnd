@@ -132,34 +132,6 @@ let draw = new terraDraw.TerraDraw({
 
 draw.start();
 
-// async function fetchAltitude() {
-//   try {
-//     const response = await fetch('http://192.168.1.145:5000/altitude');
-//     const contentType = response.headers.get("content-type");
-
-//     if (!response.ok) {
-//       throw new Error(`HTTP error! Status: ${response.status}`);
-//     }
-
-//     // Check if the response is JSON
-//     if (contentType && contentType.includes("application/json")) {
-//       const data = await response.json();
-//       console.log(data.altitude);
-//       const button = document.getElementById('altitudeValue');
-//       button.textContent = `Altitude: ${data.altitude}`;
-//     } else {
-//       const responseText = await response.text();
-//       console.error("Response was not JSON:", responseText);
-//     }
-//   } catch (error) {
-//     console.error('Error fetching altitude:', error);
-//   }
-// }
-
-// window.addEventListener('DOMContentLoaded', () => {
-//   setInterval(fetchAltitude, 1000);
-// });
-
 async function fetchData() {
   try {
     console.log("anjai");
