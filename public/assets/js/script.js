@@ -236,6 +236,8 @@ const motor3Button = document.querySelector("#motor3Button");
 motor3Button.addEventListener("click", () => command("testmotor,3,15"));
 const motor4Button = document.querySelector("#motor4Button");
 motor4Button.addEventListener("click", () => command("testmotor,4,15"));
+const standbyButton = document.querySelector("#standbyButton");
+standbyButton.addEventListener("click", () => command(""));
 
 window.addEventListener("DOMContentLoaded", () => {
   setInterval(fetchData, 3000);
