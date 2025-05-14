@@ -1,6 +1,9 @@
-var [x, y] = [-6.190529999829426, 106.82151147617375];
+var [x, y] = [-6.897, 107.635];
 
-const server = "http://192.168.1.222:5000";
+const server = "http://127.0.0.1:5000";
+
+const imageUrl = "6.386.jpg";
+
 
 var map = L.map("map", {
   crs: L.CRS.EPSG3857,
@@ -8,7 +11,7 @@ var map = L.map("map", {
   zoom: 13,
   maxZoom: 20,
   minZoom: 6,
-}).setView([x, y], 13);
+}).setView([x, y], 17);
 
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 19,
@@ -132,6 +135,56 @@ let draw = new terraDraw.TerraDraw({
 
 draw.start();
 
+async function cobain(){
+  const element2 = [
+    {
+      id: draw.getFeatureId(),
+      type: "Feature",
+      geometry: {
+        type: "Point",
+        coordinates: [107.637, -6.897],
+        // coordinates: [-6.53, 107.38],
+
+      },
+      properties: {
+        mode: "point",
+      },
+      properties2: {
+        d: "sd",
+      },
+    },
+  ];
+
+  L.geoJSON(element2, {
+    onEachFeature: function (feature, layer) {
+      layer.on("click", function () {
+        const content = `
+          <div style="text-align:center;">
+            <p><strong>ID:</strong> ${feature.id}</p>
+            <img src="${imageUrl}" alt="Popup Image" style="width:200px; border-radius:8px;" />
+          </div>
+        `;
+        L.popup()
+          .setLatLng(layer.getLatLng())
+          .setContent(content)
+          .openOn(map);
+      });
+    },
+  }).addTo(map);
+  
+  console.log(element2[0].geometry.coordinates);
+  const bounds2 = L.GeoJSON.coordsToLatLngs([
+    element2[0].geometry.coordinates,
+    [107.637, -6.897],
+  ]);
+  const bound2 = L.GeoJSON.coordsToLatLng(element2[0].geometry.coordinates);
+  
+  // console.log(element2.geometry.coordinates);
+  console.log(element2);
+  draw.clear();
+  map.setView(bound2, 19);
+  // draw.addFeatures(element2);  
+}
 
 async function fetchData() {
   try {
@@ -192,6 +245,7 @@ async function fetchData() {
           },
         },
       ];
+
       console.log(element[0].geometry.coordinates);
       const bounds = L.GeoJSON.coordsToLatLngs([
         element[0].geometry.coordinates,
@@ -202,7 +256,9 @@ async function fetchData() {
       // map.fitBounds(bound);
       map.setView(bound, 19);
       draw.clear();
-      draw.addFeatures(element);
+      // draw.addFeatures(element);
+
+
     } else {
       const responseText = await response.text();
       console.error("Response was not JSON:", responseText);
@@ -239,5 +295,7 @@ const motor4Button = document.querySelector("#motor4Button");
 motor4Button.addEventListener("click", () => command("testmotor,4,15"));
 
 window.addEventListener("DOMContentLoaded", () => {
-  setInterval(fetchData, 3000);
+  // setInterval(fetchData, 3000);
+  // setInterval(cobain,10000);
+  cobain();
 });
