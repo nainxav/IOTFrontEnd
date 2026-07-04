@@ -57,6 +57,10 @@ def fly(altitude, latitude, longitude):
         longitude: garis bujur dalam derajat
     """
     try:
+        altitude = float(altitude)
+        latitude = float(latitude)
+        longitude = float(longitude)
+
         # Pastikan drone dalam mode GUIDED
         Script.ChangeMode("GUIDED")
         
@@ -107,6 +111,73 @@ def fly(altitude, latitude, longitude):
         
     return True
 
+def arm_drone():
+    try:
+        MAV.doARM(True)
+        print("Drone armed")
+        return True
+    except Exception as e:
+        print(f"Failed to arm drone: {e}")
+        return False
+
+def disarm_drone():
+    try:
+        MAV.doARM(False)
+        print("Drone disarmed")
+        return True
+    except Exception as e:
+        print(f"Failed to disarm drone: {e}")
+        return False
+
+def test_motor(motor_number, power):
+    try:
+        # MAV_CMD_DO_MOTOR_TEST = 209
+        # params: motor, throttle type, throttle %, timeout, motor count, test order, empty
+        MAV.doCommand(209, int(motor_number), 0, float(power), 3, 0, 0, 0)
+        print(f"Testing motor {motor_number} at {power}%")
+        return True
+    except Exception as e:
+        print(f"Failed to test motor {motor_number}: {e}")
+        return False
+
+def fetch_command():
+    try:
+        response_text = get_request(urlget)
+        data = json.loads(response_text)
+        return data.get("command")
+    except Exception as e:
+        print(f"Failed to fetch command: {e}")
+        return None
+
+def execute_command(command):
+    if not command:
+        return
+
+    command = command.strip()
+    print(f"Received command: {command}")
+
+    alias_commands = {
+        "cw1": "testmotor,1,15",
+        "ccw1": "testmotor,2,15",
+        "ccw2": "testmotor,3,15",
+        "cw2": "testmotor,4,15",
+    }
+    command = alias_commands.get(command, command)
+
+    parts = [part.strip() for part in command.split(",")]
+    command_name = parts[0].lower()
+
+    if command_name == "arm":
+        arm_drone()
+    elif command_name == "disarm":
+        disarm_drone()
+    elif command_name == "testmotor" and len(parts) == 3:
+        test_motor(parts[1], parts[2])
+    elif command_name == "goto" and len(parts) == 4:
+        fly(parts[1], parts[2], parts[3])
+    else:
+        print(f"Unknown command: {command}")
+
 urlpost = "http://127.0.0.1:5000/data"
 urlget = "http://127.0.0.1:5000/command"
 while True:
@@ -131,6 +202,7 @@ while True:
     'wp_dist': current_wp_dist
 }
 
-    response_text = post_request(urlpost, data) 
-    # command = get_request(urlget)    
+    response_text = post_request(urlpost, data)
+    command = fetch_command()
+    execute_command(command)
     Script.Sleep(1000)

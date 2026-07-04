@@ -130,6 +130,20 @@ def get_altitude():
 target = {'altitude':None, 'latitude':None, 'longitude':None}
 commands = []
 
+def get_request_command():
+    data = request.get_json(silent=True) or {}
+    command_value = data.get('command') or request.form.get('command')
+    if command_value:
+        return command_value.strip()
+
+    altitude = request.form.get("altitude") or data.get("altitude")
+    latitude = request.form.get("latitude") or data.get("latitude")
+    longitude = request.form.get("longitude") or data.get("longitude")
+    if altitude and latitude and longitude:
+        return f"goto,{altitude},{latitude},{longitude}"
+
+    return None
+
 def changedata(data):
     global droneData
     if 'altitude' in data:
@@ -157,13 +171,16 @@ def changealt():
 def command():
     global commands
     if request.method == 'GET':
-        pass
+        if commands:
+            return jsonify({'command': commands.pop(0), 'remaining': len(commands)}), 200
+        return jsonify({'command': None, 'remaining': 0}), 200
     elif request.method == 'POST':   
-        altitude = request.form.get("altitude") if request.form.get("altitude") else None
-        latitude = request.form.get("latitude") if request.form.get("latitude") else None
-        longitude = request.form.get("longitude") if request.form.get("longitude") else None
-        commands.append({'altitude':altitude, 'latitude':latitude, 'longitude':longitude})
-        return 200
+        command_value = get_request_command()
+        if not command_value:
+            return jsonify({'error': 'No command provided'}), 400
+
+        commands.append(command_value)
+        return jsonify({'message': 'Command queued', 'command': command_value, 'remaining': len(commands)}), 200
 
 if __name__ == '__main__':
     initiateDatabase()

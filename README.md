@@ -31,7 +31,7 @@ This project integrates **Pixhawk 2.4.8** with **ArduPilot** and a **web-based d
 ### Map Visualization
 - Live drone position tracking with Leaflet.js
 - Interactive map with OpenStreetMap tiles
-- Human detection markers with timestamp and images
+- Drone position markers with telemetry context
 - Drawing tools for mission planning (TerraDraw)
 
 ### Web-Based Access
@@ -315,11 +315,14 @@ prakIOT/
 |       +-- images/             # Icons, logos, backgrounds
 |-- src/
 |   +-- tailwind.css            # TailwindCSS source
-|-- server.py                   # Flask backend server
+|-- server.py                   # Basic Flask backend server
+|-- serverWithForwardV2.py      # Control-focused Flask backend with follow and forward commands
 |-- server.js                   # Node.js proxy server
+|-- drone_control_app.py        # PyQt5 desktop drone control app
 |-- postalt.py                  # MissionPlanner telemetry script
 |-- getalt.py                   # MissionPlanner GET request script
 |-- main.py                     # Basic altitude monitor script
+|-- requirements-desktop.txt    # Desktop app Python dependency
 |-- package.json                # Node.js dependencies
 |-- tailwind.config.js          # TailwindCSS configuration
 |-- postcss.config.js           # PostCSS configuration
@@ -336,7 +339,7 @@ prakIOT/
 
 2. **Start Flask Backend**
    ```bash
-   python server.py
+   python serverWithForwardV2.py
    ```
 
 3. **Start Frontend**
@@ -347,6 +350,27 @@ prakIOT/
 4. **Connect Pixhawk** - Connect via USB or telemetry radio
 
 5. **Run MissionPlanner Script** - Load `postalt.py` in MissionPlanner
+
+### Starting the Desktop Control App
+
+The PyQt5 desktop controller sends commands to `serverWithForwardV2.py`.
+
+```bash
+pip install -r requirements-desktop.txt
+python drone_control_app.py
+```
+
+Available desktop commands:
+- `arm`
+- `disarm`
+- `land`
+- `rtl`
+- `takeoff,{alt}`
+- `testmotor,{n},{pwr}` for motors 1-8
+- `goto,{alt},{lat},{lon}`
+- `followtarget,{alt},{lat},{lon}`
+- `forward,{distance}`
+- `forward,{x},{y},{z}`
 
 ### Using the Web Interface
 
