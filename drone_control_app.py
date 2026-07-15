@@ -4,7 +4,7 @@ import urllib.error
 import urllib.request
 from datetime import datetime
 
-from PyQt5.QtCore import QTimer, Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import (
     QApplication,
     QDoubleSpinBox,
@@ -16,14 +16,13 @@ from PyQt5.QtWidgets import (
     QLineEdit,
     QMainWindow,
     QMessageBox,
-    QPushButton,
     QPlainTextEdit,
+    QPushButton,
     QScrollArea,
     QSpinBox,
     QVBoxLayout,
     QWidget,
 )
-
 
 DEFAULT_SERVER_URL = "http://127.0.0.1:5000"
 
@@ -40,6 +39,9 @@ class DroneApiClient:
 
     def send_command(self, command):
         return self._request("POST", "/command", {"command": command})
+
+    def cancel_command(self):
+        return self._request("POST", "/command/cancel", {})
 
     def _request(self, method, path, payload=None):
         url = f"{self.server_url}{path}"
@@ -137,16 +139,27 @@ class DroneControlWindow(QMainWindow):
 
         arm_layout = QHBoxLayout()
         arm_button = QPushButton("ARM")
-        arm_button.setStyleSheet("font-weight: bold; color: white; background-color: #16a34a; padding: 10px;")
+        arm_button.setStyleSheet(
+            "font-weight: bold; color: white; background-color: #16a34a; padding: 10px;"
+        )
         arm_button.clicked.connect(lambda: self.send_command("arm"))
 
         disarm_button = QPushButton("DISARM")
-        disarm_button.setStyleSheet("font-weight: bold; color: white; background-color: #dc2626; padding: 10px;")
+        disarm_button.setStyleSheet(
+            "font-weight: bold; color: white; background-color: #dc2626; padding: 10px;"
+        )
         disarm_button.clicked.connect(lambda: self.send_command("disarm"))
 
         arm_layout.addWidget(arm_button)
         arm_layout.addWidget(disarm_button)
         layout.addLayout(arm_layout)
+
+        cancel_button = QPushButton("CANCEL / RESET COMMAND")
+        cancel_button.setStyleSheet(
+            "font-weight: bold; color: white; background-color: #ea580c; padding: 10px;"
+        )
+        cancel_button.clicked.connect(self.send_cancel)
+        layout.addWidget(cancel_button)
 
         mode_layout = QHBoxLayout()
         land_button = QPushButton("LAND")
@@ -166,6 +179,7 @@ class DroneControlWindow(QMainWindow):
         layout.addWidget(self._build_waypoint_panel())
         layout.addWidget(self._build_follow_target_panel())
         layout.addWidget(self._build_forward_panel())
+        layout.addWidget(self._build_manual_control_panel())
         layout.addStretch()
 
         scroll.setWidget(container)
@@ -176,8 +190,9 @@ class DroneControlWindow(QMainWindow):
         layout = QHBoxLayout(group)
 
         self.takeoff_altitude = QDoubleSpinBox()
-        self.takeoff_altitude.setRange(1, 100)
-        self.takeoff_altitude.setDecimals(1)
+        self.takeoff_altitude.setRange(0.1, 100)
+        self.takeoff_altitude.setDecimals(2)
+        self.takeoff_altitude.setSingleStep(0.1)
         self.takeoff_altitude.setSuffix(" m")
         self.takeoff_altitude.setValue(10)
 
@@ -322,6 +337,70 @@ class DroneControlWindow(QMainWindow):
 
         return group
 
+    def _build_manual_control_panel(self):
+        group = QGroupBox("Manual Control (Remote-Style)")
+        layout = QVBoxLayout(group)
+
+        step_layout = QHBoxLayout()
+        self.manual_move_step_input = QDoubleSpinBox()
+        self.manual_move_step_input.setRange(0.1, 20)
+        self.manual_move_step_input.setDecimals(1)
+        self.manual_move_step_input.setSuffix(" m")
+        self.manual_move_step_input.setValue(1.0)
+
+        self.manual_alt_step_input = QDoubleSpinBox()
+        self.manual_alt_step_input.setRange(0.1, 10)
+        self.manual_alt_step_input.setDecimals(1)
+        self.manual_alt_step_input.setSuffix(" m")
+        self.manual_alt_step_input.setValue(0.5)
+
+        step_layout.addWidget(QLabel("Move step:"))
+        step_layout.addWidget(self.manual_move_step_input)
+        step_layout.addWidget(QLabel("Altitude step:"))
+        step_layout.addWidget(self.manual_alt_step_input)
+        layout.addLayout(step_layout)
+
+        dpad_grid = QGridLayout()
+
+        forward_button = QPushButton("Forward")
+        forward_button.clicked.connect(lambda: self.send_manual_move(1, 0, 0))
+
+        backward_button = QPushButton("Backward")
+        backward_button.clicked.connect(lambda: self.send_manual_move(-1, 0, 0))
+
+        left_button = QPushButton("Left")
+        left_button.clicked.connect(lambda: self.send_manual_move(0, -1, 0))
+
+        right_button = QPushButton("Right")
+        right_button.clicked.connect(lambda: self.send_manual_move(0, 1, 0))
+
+        up_button = QPushButton("Alt Up")
+        up_button.clicked.connect(lambda: self.send_manual_altitude(1))
+
+        down_button = QPushButton("Alt Down")
+        down_button.clicked.connect(lambda: self.send_manual_altitude(-1))
+
+        for button in (
+            forward_button,
+            backward_button,
+            left_button,
+            right_button,
+            up_button,
+            down_button,
+        ):
+            button.setStyleSheet("font-weight: bold; padding: 12px;")
+
+        dpad_grid.addWidget(forward_button, 0, 1)
+        dpad_grid.addWidget(left_button, 1, 0)
+        dpad_grid.addWidget(right_button, 1, 2)
+        dpad_grid.addWidget(backward_button, 2, 1)
+        dpad_grid.addWidget(up_button, 0, 2)
+        dpad_grid.addWidget(down_button, 2, 0)
+
+        layout.addLayout(dpad_grid)
+
+        return group
+
     def _build_telemetry_panel(self):
         group = QGroupBox("Latest Telemetry")
         form = QFormLayout(group)
@@ -370,6 +449,18 @@ class DroneControlWindow(QMainWindow):
         z = self.forward_z_input.value()
         self.send_command(f"forward,{x},{y},{z}")
 
+    def send_manual_move(self, x_dir, y_dir, z_dir):
+        step = self.manual_move_step_input.value()
+        x = x_dir * step
+        y = y_dir * step
+        z = z_dir * step
+        self.send_command(f"forward,{x},{y},{z}")
+
+    def send_manual_altitude(self, z_dir):
+        step = self.manual_alt_step_input.value()
+        z = z_dir * step
+        self.send_command(f"forward,0,0,{z}")
+
     def send_command(self, command):
         try:
             response = self.api.send_command(command)
@@ -377,6 +468,14 @@ class DroneControlWindow(QMainWindow):
         except RuntimeError as error:
             self.write_log(f"Failed: {command} | {error}")
             QMessageBox.critical(self, "Command Failed", str(error))
+
+    def send_cancel(self):
+        try:
+            response = self.api.cancel_command()
+            self.write_log(f"Cancel/reset requested | {response.get('message', 'ok')}")
+        except RuntimeError as error:
+            self.write_log(f"Cancel failed | {error}")
+            QMessageBox.critical(self, "Cancel Failed", str(error))
 
     def refresh_telemetry(self):
         try:
